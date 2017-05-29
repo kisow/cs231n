@@ -45,8 +45,8 @@ def svm_loss_naive(W, X, y, reg):
   dW /= N
 
   # Add regularization to the loss.
-  loss += reg * np.sum(W * W)
-  dW += reg * 0.5 * W
+  loss += reg * 0.5 *np.sum(W * W)
+  dW += reg * W
 
   #############################################################################
   # DONE:                                                                     #
@@ -85,7 +85,7 @@ def svm_loss_vectorized(W, X, y, reg):
   margins = np.maximum(0, (scores.T - c_scores.T).T + delta) # N * C
   margins[arange_N, y] = 0 # ignore if j == yi
   loss = np.sum(margins) / N
-  loss += reg * np.sum(W * W)
+  loss += reg * 0.5 * np.sum(W * W)
   #############################################################################
   #                             END OF YOUR CODE                              #
   #############################################################################
@@ -104,7 +104,7 @@ def svm_loss_vectorized(W, X, y, reg):
   j_counts = -1 * np.sum(coeff, axis=1) # N * 1
   coeff[arange_N, y] = j_counts # N * C, pairwise update to correct counts, j == yi
   dW = X.T.dot(coeff) / N # D * C, minus by correct times and plus by incorrect times.
-  dW += reg * 0.5 * W
+  dW += reg * W
   pass
   #############################################################################
   #                             END OF YOUR CODE                              #
