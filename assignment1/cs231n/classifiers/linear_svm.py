@@ -23,35 +23,39 @@ def svm_loss_naive(W, X, y, reg):
   dW = np.zeros(W.shape) # initialize the gradient as zero
 
   # compute the loss and the gradient
-  num_classes = W.shape[1]
-  num_train = X.shape[0]
+  delta = 1
+  C = W.shape[1]
+  N = X.shape[0]
   loss = 0.0
-  for i in xrange(num_train):
+  for i in xrange(N):
     scores = X[i].dot(W)
     correct_class_score = scores[y[i]]
-    for j in xrange(num_classes):
+    for j in xrange(C):
       if j == y[i]:
         continue
-      margin = scores[j] - correct_class_score + 1 # note delta = 1
+      margin = scores[j] - correct_class_score + delta
       if margin > 0:
         loss += margin
+        dW[:, j] += X[i].T
+        dW[:, y[i]] -= X[i].T
 
   # Right now the loss is a sum over all training examples, but we want it
-  # to be an average instead so we divide by num_train.
-  loss /= num_train
+  # to be an average instead so we divide by N.
+  loss /= N
+  dW /= N
 
   # Add regularization to the loss.
   loss += reg * np.sum(W * W)
+  dW += reg * 0.5 * W
 
   #############################################################################
-  # TODO:                                                                     #
+  # DONE:                                                                     #
   # Compute the gradient of the loss function and store it dW.                #
   # Rather that first computing the loss and then computing the derivative,   #
   # it may be simpler to compute the derivative at the same time that the     #
   # loss is being computed. As a result you may need to modify some of the    #
   # code above to compute the gradient.                                       #
   #############################################################################
-
 
   return loss, dW
 
@@ -66,18 +70,29 @@ def svm_loss_vectorized(W, X, y, reg):
   dW = np.zeros(W.shape) # initialize the gradient as zero
 
   #############################################################################
-  # TODO:                                                                     #
+  # DONE:                                                                     #
   # Implement a vectorized version of the structured SVM loss, storing the    #
   # result in loss.                                                           #
   #############################################################################
-  pass
+  N = X.shape[0]
+  C = W.shape[1]
+  arange_N = np.arange(N)
+
+  delta = 1
+  scores = X.dot(W) # N * C
+  c_scores = scores[arange_N, y] # N * 1
+  # transpose to broadcast and then re-transpose
+  margins = np.maximum(0, (scores.T - c_scores.T).T + delta) # N * C
+  margins[arange_N, y] = 0 # ignore if j == yi
+  loss = np.sum(margins) / N
+  loss += reg * np.sum(W * W)
   #############################################################################
   #                             END OF YOUR CODE                              #
   #############################################################################
 
 
   #############################################################################
-  # TODO:                                                                     #
+  # DONE:                                                                     #
   # Implement a vectorized version of the gradient for the structured SVM     #
   # loss, storing the result in dW.                                           #
   #                                                                           #
@@ -85,6 +100,11 @@ def svm_loss_vectorized(W, X, y, reg):
   # to reuse some of the intermediate values that you used to compute the     #
   # loss.                                                                     #
   #############################################################################
+  coeff = (margins > 0) * 1 # N * C, margins[i][j] == 1 if j != yi and activated
+  j_counts = -1 * np.sum(coeff, axis=1) # N * 1
+  coeff[arange_N, y] = j_counts # N * C, pairwise update to correct counts, j == yi
+  dW = X.T.dot(coeff) / N # D * C, minus by correct times and plus by incorrect times.
+  dW += reg * 0.5 * W
   pass
   #############################################################################
   #                             END OF YOUR CODE                              #
