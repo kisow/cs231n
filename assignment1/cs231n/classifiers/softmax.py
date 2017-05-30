@@ -25,18 +25,51 @@ def softmax_loss_naive(W, X, y, reg):
   dW = np.zeros_like(W)
 
   #############################################################################
-  # TODO: Compute the softmax loss and its gradient using explicit loops.     #
+  # DONE: Compute the softmax loss and its gradient using explicit loops.     #
   # Store the loss in loss and the gradient in dW. If you are not careful     #
   # here, it is easy to run into numeric instability. Don't forget the        #
   # regularization!                                                           #
   #############################################################################
-  pass
+  D, C = W.shape
+  N = y.shape[0]
+  for i in range(N):
+    f = np.zeros(C)
+    for j in range(C):
+      f[j] = X[i].dot(W.T[j])
+
+    # for numeric stability
+    m = np.finfo(np.float32).min;
+    for j in range(C):
+      if m < f[j]:
+        m = f[j]
+    for j in range(C):
+      f[j] -= m;
+
+    # calc Li to accmulate
+    s = 0
+    p = np.zeros(C)
+    for j in range(C):
+      p[j] = np.exp(f[j])
+      s += p[j]
+    for j in range(C):
+      p[j] /= s
+    loss += -1 * np.log(p[y[i]])
+
+    p[y[i]] -= 1.0
+    for j in range(C):
+      dW[:, j] += p[j] * X[i]
+
+  loss /= N
+  dW /= N
+
+  # Add regularization to the loss
+  loss += reg * 0.5 * np.sum(W * W)
+  dW += reg * W
   #############################################################################
   #                          END OF YOUR CODE                                 #
   #############################################################################
 
   return loss, dW
-
 
 def softmax_loss_vectorized(W, X, y, reg):
   """
@@ -49,12 +82,34 @@ def softmax_loss_vectorized(W, X, y, reg):
   dW = np.zeros_like(W)
 
   #############################################################################
-  # TODO: Compute the softmax loss and its gradient using no explicit loops.  #
+  # DONE: Compute the softmax loss and its gradient using no explicit loops.  #
   # Store the loss in loss and the gradient in dW. If you are not careful     #
   # here, it is easy to run into numeric instability. Don't forget the        #
   # regularization!                                                           #
   #############################################################################
-  pass
+  D, C = W.shape
+  N = X.shape[0]
+
+  F = X.dot(W) # N * C
+  F = (F.T - np.max(F.T, axis=0)).T # for numeric stability
+  F = np.exp(F)
+  P = (F.T / np.sum(F.T, axis=0)).T # N * C
+
+  arange_N = np.arange(N)
+
+  # negative sum of the probability of correct class.
+  loss = -np.log(P[arange_N, y]).sum() 
+
+  P[arange_N, y] -= 1 # P -= y, y=[00..1..00]
+  dW = X.T.dot(P) # D * C
+
+  # Add regularization to the loss
+  loss /= N
+  dW /= N
+  
+  # Add regularization to the loss
+  loss += reg * 0.5 * np.sum(W * W)
+  dW += reg * W
   #############################################################################
   #                          END OF YOUR CODE                                 #
   #############################################################################
